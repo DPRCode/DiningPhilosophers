@@ -19,3 +19,31 @@ canvas{
     text-align: center;
     margin-bottom: 50px;
 }
+
+.UI{
+    top: 10%;
+    left: 20px;
+    width: 20%;
+    border-bottom: 1px solid #000;
+    text-align: center;
+}
+
+.UI button{
+    margin: 5px;
+}
+
+.UI input{
+    margin: 5px;
+}
+
+
+
+#phButtons{
+    display: flex;
+    flex-direction: column;
+    margin: 10px;
+}
+
+#phButtons button{
+    margin: 5px;
+}

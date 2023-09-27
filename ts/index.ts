@@ -1,5 +1,3 @@
-const places:number = 5;
-
 class Fork{
     private isFree:boolean;
     private id:number;
@@ -29,10 +27,14 @@ class Philosopher {
     private id:number;
     public leftFork:Fork;
     public rightFork:Fork;
+    public holdLeftFork:boolean;
+    public holdRightFork:boolean;
 
     constructor(id:number){
         this.id = id;
         this.state = Philosopher.THINKING;
+        this.holdLeftFork = false;
+        this.holdRightFork = false;
     }
 
     public addObserver(observer:Function){
@@ -84,13 +86,54 @@ class Philosopher {
             }, 4000);
         }
     }
+
+    public eatReckless(){
+        if (this.leftFork.getIsFree()) {
+            this.leftFork.setIsFree(false);
+            this.holdLeftFork = true;
+            this.notifyObservers();
+        }
+        else if (this.rightFork.getIsFree()) {
+            this.rightFork.setIsFree(false);
+            this.holdRightFork = true;
+            this.notifyObservers();
+        }
+        if (this.holdLeftFork&&this.holdRightFork){
+            this.setState(Philosopher.EATING);
+            console.log('Philosopher '+this.getId()+' is eating');
+            this.notifyObservers();
+            setTimeout(()=>{
+                this.leftFork.setIsFree(true);
+                this.rightFork.setIsFree(true);
+                this.holdLeftFork = false;
+                this.holdRightFork = false;
+                this.setState(Philosopher.THINKING);
+                console.log('Philosopher '+this.getId()+' is thinking');
+                this.notifyObservers();
+            }, 5000);
+        }else{
+            setTimeout(()=>{
+                this.eatReckless();
+            } , 1000);
+        }
+    }
+
+    getIsLeftForkTaken() {
+        return this.holdLeftFork;
+    }
+
+    getIsRightForkTaken() {
+       return this.holdRightFork;
+    }
 }
 class Table{
     public observers:Function[];
     public philosophers:Philosopher[];
     public forks:Fork[];
-    constructor() {
+    places:number;
+    constructor(places:number) {
         this.observers = [];
+        this.places = places;
         this.forks = [];
         for (let i = 1; i <= places; i++) {
             this.forks.push(new Fork(i));
@@ -102,11 +145,11 @@ class Table{
             p.addObserver(()=>{
                 this.notifyObservers();
             });
-            p.leftFork = this.forks[i];
-            if (i == 0){
-                p.rightFork = this.forks[places];
+            p.leftFork = this.forks[i-1];
+            if (i == 1){
+                p.rightFork = this.forks[places-1];
             }else{
-                p.rightFork = this.forks[i-1];
+                p.rightFork = this.forks[i-2];
             }
             this.philosophers.push(p);
         }
@@ -135,9 +178,11 @@ class UI{
     private philosopherELoaded:boolean;
     private philosopherTLoaded:boolean;
     private philosopherHLoaded:boolean;
+    private philosopherLeftForkLoaded:boolean;
+    private philosopherRightForkLoaded:boolean;
 
 
-    constructor(){
+    constructor(table:Table){
         this.canvas = document.getElementById('canvas') as HTMLCanvasElement;
         this.canvasWidth = 5000;
         this.canvasHeight = 5000;
@@ -148,22 +193,8 @@ class UI{
         this.philosopherELoaded = false;
         this.philosopherTLoaded = false;
         this.philosopherHLoaded = false;
-        this.table = new Table();
+        this.table = table;
         this.table.addObserver(()=>{
-            this.updateCanvas();
-        });
-        let startbutton = document.getElementById('Startbutton') as HTMLButtonElement;
-        startbutton.addEventListener('click', ()=>{
-            this.table.philosophers[3].eat();
-            this.table.philosophers[2].eat();
-            console.log(this.table);
-        });
-        let button2 = document.getElementById('Clearbutton') as HTMLButtonElement;
-        button2.addEventListener('click', ()=>{
-            this.clearCanvas();
-        });
-        let button3 = document.getElementById('UpdateButton') as HTMLButtonElement;
-        button3.addEventListener('click', ()=>{
             this.updateCanvas();
         });
     }
@@ -186,7 +217,7 @@ class UI{
             // Draw Plates
             let plateImage = new Image();
             plateImage.onload = ()=>{
-                for (let i = 1; i <= places; i++) {
+                for (let i = 1; i <= this.table.places; i++) {
                     this.drawOnTablePosition(i, 800, plateImage,500,500);
                 }
             }
@@ -195,21 +226,33 @@ class UI{
             let philosopherImageT = new Image();
             let philosopherImageE = new Image();
             let philosopherImageH = new Image();
+            let philosopherLeftForkImage = new Image();
+            let philosopherRightForkImage = new Image();
             philosopherImageT.onload = ()=>{
                 this.philosopherTLoaded = true;
-                this.drawPhilosophers(philosopherImageT, philosopherImageE, philosopherImageH);
+                this.drawPhilosophers(philosopherImageT, philosopherImageE, philosopherImageH, philosopherLeftForkImage, philosopherRightForkImage);
             }
             philosopherImageE.onload = ()=>{
                 this.philosopherELoaded = true;
-                this.drawPhilosophers(philosopherImageT, philosopherImageE, philosopherImageH);
+                this.drawPhilosophers(philosopherImageT, philosopherImageE, philosopherImageH, philosopherLeftForkImage, philosopherRightForkImage);
             }
             philosopherImageH.onload = ()=>{
                 this.philosopherHLoaded = true;
-                this.drawPhilosophers(philosopherImageT, philosopherImageE, philosopherImageH);
+                this.drawPhilosophers(philosopherImageT, philosopherImageE, philosopherImageH,  philosopherLeftForkImage, philosopherRightForkImage);
+            }
+            philosopherLeftForkImage.onload = ()=>{
+                this.philosopherLeftForkLoaded = true;
+                this.drawPhilosophers(philosopherImageT, philosopherImageE, philosopherImageH,  philosopherLeftForkImage, philosopherRightForkImage);
+            }
+            philosopherRightForkImage.onload = ()=>{
+                this.philosopherRightForkLoaded = true;
+                this.drawPhilosophers(philosopherImageT, philosopherImageE, philosopherImageH, philosopherLeftForkImage, philosopherRightForkImage);
             }
             philosopherImageT.src = 'res/philosopherT.png';
             philosopherImageE.src = 'res/philosopherE.png';
             philosopherImageH.src = 'res/philosopherH.png';
+            philosopherLeftForkImage.src ="res/philosopherLeftF.png";
+            philosopherRightForkImage.src ="res/philosopherRightF.png";
             // Draw forks
             let forkImage = new Image();
             forkImage.onload = ()=>{
@@ -234,11 +277,11 @@ class UI{
     }
 
     private drawOnTablePosition(position:number, radius:number, image:HTMLImageElement, imgWith:number, imgHeight:number){
-        this.drawOnCyclePosition(position, radius, image, imgWith, imgHeight, 0, places)
+        this.drawOnCyclePosition(position, radius, image, imgWith, imgHeight, 0, this.table.places)
     }
 
     private drawOnForkPosition(position:number, radius:number, image:HTMLImageElement, imgWith:number, imgHeight:number){
-        this.drawOnCyclePosition(position, radius, image, imgWith, imgHeight, -(Math.PI/5), places)
+        this.drawOnCyclePosition(position, radius, image, imgWith, imgHeight, (Math.PI/this.table.places), this.table.places)
     }
 
     private drawOnCyclePosition(position:number, radius:number, image:HTMLImageElement, imgWith:number, imgHeight:number, offset:number,steps:number){
@@ -248,12 +291,17 @@ class UI{
         this.ctx.rotate(-1*arc);
     }
 
-    private drawPhilosophers(philosopherImageT, philosopherImageE, philosopherImageH){
-        if (!this.philosopherELoaded || !this.philosopherTLoaded || !this.philosopherHLoaded){
+    private drawPhilosophers(philosopherImageT, philosopherImageE, philosopherImageH, philosopherLeftForkImage, philosopherRightForkImage){
+        if (!this.philosopherELoaded || !this.philosopherTLoaded || !this.philosopherHLoaded|| !this.philosopherLeftForkLoaded|| !this.philosopherRightForkLoaded){
             return;
         }else{
             this.table.philosophers.forEach((philosopher)=>{
                 let pImg = philosopherImageT;
+                if (philosopher.getIsLeftForkTaken()){
+                    pImg = philosopherLeftForkImage;
+                }else if (philosopher.getIsRightForkTaken()){
+                    pImg = philosopherRightForkImage;
+                }
                 if (philosopher.getState() == Philosopher.EATING){
                     pImg = philosopherImageE;
                 }else if (philosopher.getState() == Philosopher.HUNGRY){
@@ -265,5 +313,50 @@ class UI{
     }
 }
 
-let ui = new UI();
-ui.updateCanvas();
+let table:Table;
+let ui:UI;
+
+let startbutton = document.getElementById('Startbutton') as HTMLButtonElement;
+startbutton.addEventListener('click', ()=>{
+    let input = document.getElementById("NumberPh") as HTMLInputElement;
+    let number = parseInt(input.value);
+    table = new Table(number);
+    ui = new UI(table);
+    ui.updateCanvas();
+    let buttonDiv = document.getElementById('phButtons') as HTMLDivElement;
+    buttonDiv.innerHTML = "";
+    let buttonAllEatReckless = document.createElement("button");
+    buttonAllEatReckless.addEventListener('click', ()=>{
+        table.philosophers.forEach((philosopher)=>{
+            philosopher.eatReckless();
+        });
+    });
+    buttonAllEatReckless.innerText = "All eat Reckless";
+    buttonDiv.appendChild(buttonAllEatReckless);
+    for (let i = 1; i <=number; i++) {
+        let div = document.createElement("div");
+        div.innerText = "Philosopher "+i;
+        let buttonEat = document.createElement("button");
+        let buttonEatR = document.createElement("button");
+        buttonEat.addEventListener('click', ()=>{
+            console.log(table);
+            table.philosophers[i-1].eat();
+        });
+        buttonEatR.addEventListener('click', ()=>{
+            table.philosophers[i-1].eatReckless();
+        });
+        buttonEat.innerText = "Philosopher "+i+" eat";
+        buttonEatR.innerText = "Philosopher "+i+" eat Reckless";
+        div.appendChild(buttonEat);
+        div.appendChild(buttonEatR);
+        buttonDiv.appendChild(div);
+    }
+});
+let button2 = document.getElementById('Clearbutton') as HTMLButtonElement;
+button2.addEventListener('click', ()=>{
+    ui.clearCanvas();
+});
+let button3 = document.getElementById('UpdateButton') as HTMLButtonElement;
+button3.addEventListener('click', ()=>{
+    ui.updateCanvas();
+});
