@@ -3,8 +3,6 @@ var Fork = /** @class */ (function () {
     function Fork(id) {
         this.id = id;
         this.isFree = true;
-        this.image = new Image();
-        this.image.src = './res/fork.png';
     }
     Fork.prototype.getId = function () {
         return this.id;
@@ -14,12 +12,6 @@ var Fork = /** @class */ (function () {
     };
     Fork.prototype.setIsFree = function (isFree) {
         this.isFree = isFree;
-        if (this.isFree) {
-            this.image.style.visibility = 'visible';
-        }
-        else {
-            this.image.style.visibility = 'hidden';
-        }
     };
     return Fork;
 }());
@@ -27,8 +19,6 @@ var Philosopher = /** @class */ (function () {
     function Philosopher(id) {
         this.id = id;
         this.state = Philosopher.THINKING;
-        this.image = new Image();
-        this.image.src = './res/philosopherT.png';
     }
     Philosopher.prototype.addObserver = function (observer) {
         if (!this.observers) {
@@ -47,15 +37,6 @@ var Philosopher = /** @class */ (function () {
     };
     Philosopher.prototype.setState = function (state) {
         this.state = state;
-        if (this.state == Philosopher.THINKING) {
-            this.image.src = './res/philosopherT.png';
-        }
-        else if (this.state == Philosopher.HUNGRY) {
-            this.image.src = './res/philosopherH.png';
-        }
-        else if (this.state == Philosopher.EATING) {
-            this.image.src = './res/philosopherE.png';
-        }
     };
     Philosopher.prototype.getId = function () {
         return this.id;
@@ -69,9 +50,9 @@ var Philosopher = /** @class */ (function () {
             console.log('Philosopher ' + this.getId() + ' is eating');
             this.notifyObservers();
             setTimeout(function () {
-                _this.setState(Philosopher.THINKING);
                 _this.leftFork.setIsFree(true);
                 _this.rightFork.setIsFree(true);
+                _this.setState(Philosopher.THINKING);
                 console.log('Philosopher ' + _this.getId() + ' is thinking');
                 _this.notifyObservers();
             }, 5000);
@@ -82,7 +63,7 @@ var Philosopher = /** @class */ (function () {
             this.notifyObservers();
             setTimeout(function () {
                 _this.eat();
-            }, 5000);
+            }, 4000);
         }
     };
     Philosopher.THINKING = 0;
@@ -94,20 +75,23 @@ var Table = /** @class */ (function () {
     function Table() {
         var _this = this;
         this.observers = [];
-        this.image = new Image();
-        this.image.src = './res/table.png';
         this.forks = [];
-        for (var i = 0; i <= places; i++) {
+        for (var i = 1; i <= places; i++) {
             this.forks.push(new Fork(i));
         }
         this.philosophers = [];
-        for (var i = 0; i <= places; i++) {
+        for (var i = 1; i <= places; i++) {
             var p = new Philosopher(i);
             p.addObserver(function () {
                 _this.notifyObservers();
             });
             p.leftFork = this.forks[i];
-            p.rightFork = this.forks[(i + 1) % places];
+            if (i == 0) {
+                p.rightFork = this.forks[places];
+            }
+            else {
+                p.rightFork = this.forks[i - 1];
+            }
             this.philosophers.push(p);
         }
     }
@@ -132,42 +116,97 @@ var UI = /** @class */ (function () {
         this.canvas.height = this.canvasHeight;
         this.ctx = this.canvas.getContext('2d');
         this.ctx.translate(this.canvasWidth / 2, this.canvasHeight / 2);
-        this.button = document.getElementById('button');
-        this.button.addEventListener('click', function () {
-            _this.table.philosophers[0].eat();
-            _this.table.philosophers[1].eat();
-        });
-        this.plate = new Image();
-        this.plate.src = './res/plate.png';
+        this.philosopherELoaded = false;
+        this.philosopherTLoaded = false;
+        this.philosopherHLoaded = false;
         this.table = new Table();
         this.table.addObserver(function () {
             _this.updateCanvas();
         });
+        var startbutton = document.getElementById('Startbutton');
+        startbutton.addEventListener('click', function () {
+            _this.table.philosophers[3].eat();
+            _this.table.philosophers[2].eat();
+            console.log(_this.table);
+        });
+        var button2 = document.getElementById('Clearbutton');
+        button2.addEventListener('click', function () {
+            _this.clearCanvas();
+        });
+        var button3 = document.getElementById('UpdateButton');
+        button3.addEventListener('click', function () {
+            _this.updateCanvas();
+        });
     }
-    UI.prototype.createDefaultCanvas = function () {
-        this.updateCanvas();
-    };
     UI.prototype.updateCanvas = function () {
         var _this = this;
-        this.ctx.clearRect(-this.canvasWidth / 2, -this.canvasHeight / 2, this.canvasWidth, this.canvasHeight);
-        var tableWith = 2000;
-        var tableHeight = 2000;
-        this.ctx.drawImage(this.table.image, -tableWith / 2, -tableHeight / 2, tableWith, tableHeight);
-        for (var i = 0; i <= places; i++) {
-            this.drawOnTablePosition(i, 800, this.plate, 500, 500);
+        try {
+            this.clearCanvas();
+            this.ctx.save();
+            this.philosopherTLoaded = false;
+            this.philosopherELoaded = false;
+            this.philosopherHLoaded = false;
+            // Darw table
+            var tableWith_1 = 2000;
+            var tableHeight_1 = 2000;
+            var tableImage_1 = new Image();
+            tableImage_1.onload = function () {
+                _this.ctx.drawImage(tableImage_1, -tableWith_1 / 2, -tableHeight_1 / 2, tableWith_1, tableHeight_1);
+            };
+            tableImage_1.src = 'res/table.png';
+            // Draw Plates
+            var plateImage_1 = new Image();
+            plateImage_1.onload = function () {
+                for (var i = 1; i <= places; i++) {
+                    _this.drawOnTablePosition(i, 800, plateImage_1, 500, 500);
+                }
+            };
+            plateImage_1.src = 'res/plate.png';
+            // Draw philosophers
+            var philosopherImageT_1 = new Image();
+            var philosopherImageE_1 = new Image();
+            var philosopherImageH_1 = new Image();
+            philosopherImageT_1.onload = function () {
+                _this.philosopherTLoaded = true;
+                _this.drawPhilosophers(philosopherImageT_1, philosopherImageE_1, philosopherImageH_1);
+            };
+            philosopherImageE_1.onload = function () {
+                _this.philosopherELoaded = true;
+                _this.drawPhilosophers(philosopherImageT_1, philosopherImageE_1, philosopherImageH_1);
+            };
+            philosopherImageH_1.onload = function () {
+                _this.philosopherHLoaded = true;
+                _this.drawPhilosophers(philosopherImageT_1, philosopherImageE_1, philosopherImageH_1);
+            };
+            philosopherImageT_1.src = 'res/philosopherT.png';
+            philosopherImageE_1.src = 'res/philosopherE.png';
+            philosopherImageH_1.src = 'res/philosopherH.png';
+            // Draw forks
+            var forkImage_1 = new Image();
+            forkImage_1.onload = function () {
+                _this.table.forks.forEach(function (fork) {
+                    if (fork.getIsFree()) {
+                        if (fork.getIsFree()) {
+                            _this.drawOnForkPosition(fork.getId(), 800, forkImage_1, 500, 500);
+                        }
+                    }
+                });
+            };
+            forkImage_1.src = 'res/fork.png';
+            this.ctx.restore();
         }
-        this.table.philosophers.forEach(function (philosopher) {
-            _this.drawOnTablePosition(philosopher.getId(), 1000, philosopher.image, 500, 500);
-        });
-        this.table.forks.forEach(function (fork) {
-            _this.drawOnForkPosition(fork.getId(), 800, fork.image, 500, 500);
-        });
+        catch (e) {
+            console.log(e);
+        }
+    };
+    UI.prototype.clearCanvas = function () {
+        this.ctx.clearRect(-this.canvasWidth / 2, -this.canvasHeight / 2, this.canvasWidth, this.canvasHeight);
     };
     UI.prototype.drawOnTablePosition = function (position, radius, image, imgWith, imgHeight) {
         this.drawOnCyclePosition(position, radius, image, imgWith, imgHeight, 0, places);
     };
     UI.prototype.drawOnForkPosition = function (position, radius, image, imgWith, imgHeight) {
-        this.drawOnCyclePosition(position, radius, image, imgWith, imgHeight, Math.PI, places);
+        this.drawOnCyclePosition(position, radius, image, imgWith, imgHeight, -(Math.PI / 5), places);
     };
     UI.prototype.drawOnCyclePosition = function (position, radius, image, imgWith, imgHeight, offset, steps) {
         var arc = 2 * Math.PI / steps * position + offset;
@@ -175,9 +214,26 @@ var UI = /** @class */ (function () {
         this.ctx.drawImage(image, 0 - imgWith / 2, radius - imgHeight / 2, imgWith, imgHeight);
         this.ctx.rotate(-1 * arc);
     };
+    UI.prototype.drawPhilosophers = function (philosopherImageT, philosopherImageE, philosopherImageH) {
+        var _this = this;
+        if (!this.philosopherELoaded || !this.philosopherTLoaded || !this.philosopherHLoaded) {
+            return;
+        }
+        else {
+            this.table.philosophers.forEach(function (philosopher) {
+                var pImg = philosopherImageT;
+                if (philosopher.getState() == Philosopher.EATING) {
+                    pImg = philosopherImageE;
+                }
+                else if (philosopher.getState() == Philosopher.HUNGRY) {
+                    pImg = philosopherImageH;
+                }
+                _this.drawOnTablePosition(philosopher.getId(), 1000, pImg, 500, 500);
+            });
+        }
+    };
     return UI;
 }());
 var ui = new UI();
-ui.createDefaultCanvas();
 ui.updateCanvas();
 //# sourceMappingURL=index.js.map
