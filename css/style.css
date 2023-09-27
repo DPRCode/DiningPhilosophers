@@ -3,11 +3,8 @@ canvas{
     background: #fff;
     margin: 0 auto;
     display: block;
-    position: absolute;
-    left: 0;
-    right: 0;
-    width: 50%;
-    height: 70%;
+    height: 600px;
+    width: 600px;
 }
 
 .header {
@@ -20,11 +17,16 @@ canvas{
     margin-bottom: 50px;
 }
 
+.content{
+    display: flex;
+    flex-direction: row;
+}
+
 .UI{
     top: 10%;
     left: 20px;
     width: 20%;
-    border-bottom: 1px solid #000;
+    border: 1px solid #000;
     text-align: center;
 }
 
@@ -46,4 +48,12 @@ canvas{
 
 #phButtons button{
     margin: 5px;
+}
+
+.Info{
+    top: 10%;
+    right: 20px;
+    width: 20%;
+    border: 1px solid #000;
+    text-align: center;
 }

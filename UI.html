@@ -11,14 +11,21 @@
     <div class="header">
         <h1>The dining Philosophers</h1>
     </div>
-    <canvas id="canvas">
-    </canvas>
-    <div class="UI">
-        <button id="Startbutton">Start</button>
-        <button id="Clearbutton">Clear</button>
-        <button id="UpdateButton">Update</button>
-        <label for="NumberPh">Number of Philosophers</label><input id="NumberPh" type="number">
-        <div id="phButtons"></div>
+    <div class="content">
+        <div class="UI">
+            <button id="Startbutton">Start</button>
+            <button id="Clearbutton">Clear</button>
+            <button id="UpdateButton">Update</button>
+            <label for="NumberPh">Number of Philosophers</label><input id="NumberPh" type="number">
+            <div id="phButtons"></div>
+        </div>
+        <canvas id="canvas">
+        </canvas>
+        <div class="Info">
+            <p>Each philosopher needs a fixed amount of time to inquire one Fork</p>
+            <p>Each philosopher needs two forks to eat</p>
+            <p>Each philosopher eats a fixed amount of time</p>
+        </div>
     </div>
 </body>
 </html>
