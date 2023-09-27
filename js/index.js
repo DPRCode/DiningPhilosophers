@@ -67,7 +67,7 @@ var Philosopher = /** @class */ (function () {
             }, 4000);
         }
     };
-    Philosopher.prototype.eatReakless = function () {
+    Philosopher.prototype.eatReckless = function () {
         var _this = this;
         if (this.leftFork.getIsFree()) {
             this.leftFork.setIsFree(false);
@@ -95,7 +95,7 @@ var Philosopher = /** @class */ (function () {
         }
         else {
             setTimeout(function () {
-                _this.eatReakless();
+                _this.eatReckless();
             }, 1000);
         }
     };
@@ -156,9 +156,51 @@ var UI = /** @class */ (function () {
         this.canvas.height = this.canvasHeight;
         this.ctx = this.canvas.getContext('2d');
         this.ctx.translate(this.canvasWidth / 2, this.canvasHeight / 2);
-        this.philosopherELoaded = false;
-        this.philosopherTLoaded = false;
-        this.philosopherHLoaded = false;
+        // Load images table
+        this.tableImage = new Image();
+        this.tableImage.onload = function () {
+            _this.updateCanvas();
+        };
+        this.tableImage.src = 'res/table.png';
+        // Load images plate
+        this.plateImage = new Image();
+        this.plateImage.onload = function () {
+            _this.updateCanvas();
+        };
+        this.plateImage.src = 'res/plate.png';
+        // Load images fork
+        this.forkImage = new Image();
+        this.forkImage.onload = function () {
+            _this.updateCanvas();
+        };
+        this.forkImage.src = 'res/fork.png';
+        // Load images philosopher
+        this.philosopherImageT = new Image();
+        this.philosopherImageE = new Image();
+        this.philosopherImageH = new Image();
+        this.philosopherLeftForkImage = new Image();
+        this.philosopherRightForkImage = new Image();
+        this.philosopherImageT.onload = function () {
+            _this.updateCanvas();
+        };
+        this.philosopherImageE.onload = function () {
+            _this.updateCanvas();
+        };
+        this.philosopherImageH.onload = function () {
+            _this.updateCanvas();
+        };
+        this.philosopherLeftForkImage.onload = function () {
+            _this.updateCanvas();
+        };
+        this.philosopherRightForkImage.onload = function () {
+            _this.updateCanvas();
+        };
+        this.philosopherImageT.src = 'res/philosopherT.png';
+        this.philosopherImageE.src = 'res/philosopherE.png';
+        this.philosopherImageH.src = 'res/philosopherH.png';
+        this.philosopherLeftForkImage.src = "res/philosopherLeftF.png";
+        this.philosopherRightForkImage.src = "res/philosopherRightF.png";
+        // Set table
         this.table = table;
         this.table.addObserver(function () {
             _this.updateCanvas();
@@ -169,68 +211,29 @@ var UI = /** @class */ (function () {
         try {
             this.clearCanvas();
             this.ctx.save();
-            this.philosopherTLoaded = false;
-            this.philosopherELoaded = false;
-            this.philosopherHLoaded = false;
-            // Darw table
-            var tableWith_1 = 2000;
-            var tableHeight_1 = 2000;
-            var tableImage_1 = new Image();
-            tableImage_1.onload = function () {
-                _this.ctx.drawImage(tableImage_1, -tableWith_1 / 2, -tableHeight_1 / 2, tableWith_1, tableHeight_1);
-            };
-            tableImage_1.src = 'res/table.png';
+            // Draw table
+            if (this.tableImage.complete) {
+                var tableWith = 2000;
+                var tableHeight = 2000;
+                this.ctx.drawImage(this.tableImage, -tableWith / 2, -tableHeight / 2, tableWith, tableHeight);
+            }
             // Draw Plates
-            var plateImage_1 = new Image();
-            plateImage_1.onload = function () {
-                for (var i = 1; i <= _this.table.places; i++) {
-                    _this.drawOnTablePosition(i, 800, plateImage_1, 500, 500);
+            if (this.plateImage.complete) {
+                for (var i = 1; i <= this.table.places; i++) {
+                    this.drawOnTablePosition(i, 800, this.plateImage, 500, 500);
                 }
-            };
-            plateImage_1.src = 'res/plate.png';
-            // Draw philosophers
-            var philosopherImageT_1 = new Image();
-            var philosopherImageE_1 = new Image();
-            var philosopherImageH_1 = new Image();
-            var philosopherLeftForkImage_1 = new Image();
-            var philosopherRightForkImage_1 = new Image();
-            philosopherImageT_1.onload = function () {
-                _this.philosopherTLoaded = true;
-                _this.drawPhilosophers(philosopherImageT_1, philosopherImageE_1, philosopherImageH_1, philosopherLeftForkImage_1, philosopherRightForkImage_1);
-            };
-            philosopherImageE_1.onload = function () {
-                _this.philosopherELoaded = true;
-                _this.drawPhilosophers(philosopherImageT_1, philosopherImageE_1, philosopherImageH_1, philosopherLeftForkImage_1, philosopherRightForkImage_1);
-            };
-            philosopherImageH_1.onload = function () {
-                _this.philosopherHLoaded = true;
-                _this.drawPhilosophers(philosopherImageT_1, philosopherImageE_1, philosopherImageH_1, philosopherLeftForkImage_1, philosopherRightForkImage_1);
-            };
-            philosopherLeftForkImage_1.onload = function () {
-                _this.philosopherLeftForkLoaded = true;
-                _this.drawPhilosophers(philosopherImageT_1, philosopherImageE_1, philosopherImageH_1, philosopherLeftForkImage_1, philosopherRightForkImage_1);
-            };
-            philosopherRightForkImage_1.onload = function () {
-                _this.philosopherRightForkLoaded = true;
-                _this.drawPhilosophers(philosopherImageT_1, philosopherImageE_1, philosopherImageH_1, philosopherLeftForkImage_1, philosopherRightForkImage_1);
-            };
-            philosopherImageT_1.src = 'res/philosopherT.png';
-            philosopherImageE_1.src = 'res/philosopherE.png';
-            philosopherImageH_1.src = 'res/philosopherH.png';
-            philosopherLeftForkImage_1.src = "res/philosopherLeftF.png";
-            philosopherRightForkImage_1.src = "res/philosopherRightF.png";
+            }
             // Draw forks
-            var forkImage_1 = new Image();
-            forkImage_1.onload = function () {
-                _this.table.forks.forEach(function (fork) {
+            if (this.forkImage.complete) {
+                this.table.forks.forEach(function (fork) {
                     if (fork.getIsFree()) {
                         if (fork.getIsFree()) {
-                            _this.drawOnForkPosition(fork.getId(), 800, forkImage_1, 500, 500);
+                            _this.drawOnForkPosition(fork.getId(), 800, _this.forkImage, 500, 500);
                         }
                     }
                 });
-            };
-            forkImage_1.src = 'res/fork.png';
+            }
+            this.drawPhilosophers();
             this.ctx.restore();
         }
         catch (e) {
@@ -252,27 +255,27 @@ var UI = /** @class */ (function () {
         this.ctx.drawImage(image, 0 - imgWith / 2, radius - imgHeight / 2, imgWith, imgHeight);
         this.ctx.rotate(-1 * arc);
     };
-    UI.prototype.drawPhilosophers = function (philosopherImageT, philosopherImageE, philosopherImageH, philosopherLeftForkImage, philosopherRightForkImage) {
+    UI.prototype.drawPhilosophers = function () {
         var _this = this;
-        if (!this.philosopherELoaded || !this.philosopherTLoaded || !this.philosopherHLoaded || !this.philosopherLeftForkLoaded || !this.philosopherRightForkLoaded) {
+        if (!this.philosopherImageE.complete || !this.philosopherImageH.complete || !this.philosopherImageT.complete || !this.philosopherLeftForkImage.complete || !this.philosopherRightForkImage.complete) {
             return;
         }
         else {
             this.table.philosophers.forEach(function (philosopher) {
-                var pImg = philosopherImageT;
+                var pImg = _this.philosopherImageT;
                 if (philosopher.getIsLeftForkTaken()) {
-                    pImg = philosopherLeftForkImage;
+                    pImg = _this.philosopherLeftForkImage;
                 }
                 else if (philosopher.getIsRightForkTaken()) {
-                    pImg = philosopherRightForkImage;
+                    pImg = _this.philosopherRightForkImage;
                 }
                 if (philosopher.getState() == Philosopher.EATING) {
-                    pImg = philosopherImageE;
+                    pImg = _this.philosopherImageE;
                 }
                 else if (philosopher.getState() == Philosopher.HUNGRY) {
-                    pImg = philosopherImageH;
+                    pImg = _this.philosopherImageH;
                 }
-                _this.drawOnTablePosition(philosopher.getId(), 1000, pImg, 500, 500);
+                _this.drawOnTablePosition(philosopher.getId(), 1100, pImg, 500, 500);
             });
         }
     };
@@ -289,14 +292,14 @@ startbutton.addEventListener('click', function () {
     ui.updateCanvas();
     var buttonDiv = document.getElementById('phButtons');
     buttonDiv.innerHTML = "";
-    var buttonAllEatReakless = document.createElement("button");
-    buttonAllEatReakless.addEventListener('click', function () {
+    var buttonAllEatReckless = document.createElement("button");
+    buttonAllEatReckless.addEventListener('click', function () {
         table.philosophers.forEach(function (philosopher) {
             philosopher.eatReckless();
         });
     });
-    buttonAllEatReakless.innerText = "All eat Reakless";
-    buttonDiv.appendChild(buttonAllEatReakless);
+    buttonAllEatReckless.innerText = "All eat Reckless";
+    buttonDiv.appendChild(buttonAllEatReckless);
     var _loop_1 = function (i) {
         var div = document.createElement("div");
         div.innerText = "Philosopher " + i;
@@ -310,7 +313,7 @@ startbutton.addEventListener('click', function () {
             table.philosophers[i - 1].eatReckless();
         });
         buttonEat.innerText = "Philosopher " + i + " eat";
-        buttonEatR.innerText = "Philosopher " + i + " eat Reakless";
+        buttonEatR.innerText = "Philosopher " + i + " eat Reckless";
         div.appendChild(buttonEat);
         div.appendChild(buttonEatR);
         buttonDiv.appendChild(div);

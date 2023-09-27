@@ -175,11 +175,15 @@ class UI{
     private canvasWidth:number;
     private canvasHeight:number;
     private table:Table;
-    private philosopherELoaded:boolean;
-    private philosopherTLoaded:boolean;
-    private philosopherHLoaded:boolean;
-    private philosopherLeftForkLoaded:boolean;
-    private philosopherRightForkLoaded:boolean;
+    private philosopherImageT:HTMLImageElement;
+    private philosopherImageE:HTMLImageElement;
+    private philosopherImageH:HTMLImageElement;
+    private philosopherLeftForkImage:HTMLImageElement;
+    private philosopherRightForkImage:HTMLImageElement;
+    private tableImage:HTMLImageElement;
+    private plateImage:HTMLImageElement;
+    private forkImage:HTMLImageElement;
+
 
 
     constructor(table:Table){
@@ -190,9 +194,51 @@ class UI{
         this.canvas.height = this.canvasHeight;
         this.ctx = this.canvas.getContext('2d');
         this.ctx.translate(this.canvasWidth / 2, this.canvasHeight / 2);
-        this.philosopherELoaded = false;
-        this.philosopherTLoaded = false;
-        this.philosopherHLoaded = false;
+        // Load images table
+        this.tableImage = new Image();
+        this.tableImage.onload = ()=>{
+            this.updateCanvas();
+        }
+        this.tableImage.src = 'res/table.png';
+        // Load images plate
+        this.plateImage = new Image();
+        this.plateImage.onload = ()=>{
+            this.updateCanvas();
+        }
+        this.plateImage.src = 'res/plate.png';
+        // Load images fork
+        this.forkImage = new Image();
+        this.forkImage.onload = ()=>{
+            this.updateCanvas();
+        }
+        this.forkImage.src = 'res/fork.png';
+        // Load images philosopher
+        this.philosopherImageT = new Image();
+        this.philosopherImageE = new Image();
+        this.philosopherImageH = new Image();
+        this.philosopherLeftForkImage = new Image();
+        this.philosopherRightForkImage = new Image();
+        this.philosopherImageT.onload = ()=>{
+            this.updateCanvas();
+        }
+        this.philosopherImageE.onload = ()=>{
+            this.updateCanvas();
+        }
+        this.philosopherImageH.onload = ()=>{
+            this.updateCanvas();
+        }
+        this.philosopherLeftForkImage.onload = ()=>{
+            this.updateCanvas();
+        }
+        this.philosopherRightForkImage.onload = ()=>{
+            this.updateCanvas();
+        }
+        this.philosopherImageT.src = 'res/philosopherT.png';
+        this.philosopherImageE.src = 'res/philosopherE.png';
+        this.philosopherImageH.src = 'res/philosopherH.png';
+        this.philosopherLeftForkImage.src ="res/philosopherLeftF.png";
+        this.philosopherRightForkImage.src ="res/philosopherRightF.png";
+        // Set table
         this.table = table;
         this.table.addObserver(()=>{
             this.updateCanvas();
@@ -203,68 +249,29 @@ class UI{
         try {
             this.clearCanvas();
             this.ctx.save();
-            this.philosopherTLoaded = false;
-            this.philosopherELoaded = false;
-            this.philosopherHLoaded = false;
-            // Darw table
-            let tableWith= 2000;
-            let tableHeight = 2000;
-            let tableImage = new Image();
-            tableImage.onload = ()=>{
-                this.ctx.drawImage(tableImage, -tableWith/2, -tableHeight/2, tableWith, tableHeight);
+            // Draw table
+            if (this.tableImage.complete){
+                let tableWith= 2000;
+                let tableHeight = 2000;
+                this.ctx.drawImage(this.tableImage, -tableWith/2, -tableHeight/2, tableWith, tableHeight);
             }
-            tableImage.src = 'res/table.png';
             // Draw Plates
-            let plateImage = new Image();
-            plateImage.onload = ()=>{
+            if (this.plateImage.complete){
                 for (let i = 1; i <= this.table.places; i++) {
-                    this.drawOnTablePosition(i, 800, plateImage,500,500);
+                    this.drawOnTablePosition(i, 800, this.plateImage,500,500);
                 }
             }
-            plateImage.src = 'res/plate.png';
-            // Draw philosophers
-            let philosopherImageT = new Image();
-            let philosopherImageE = new Image();
-            let philosopherImageH = new Image();
-            let philosopherLeftForkImage = new Image();
-            let philosopherRightForkImage = new Image();
-            philosopherImageT.onload = ()=>{
-                this.philosopherTLoaded = true;
-                this.drawPhilosophers(philosopherImageT, philosopherImageE, philosopherImageH, philosopherLeftForkImage, philosopherRightForkImage);
-            }
-            philosopherImageE.onload = ()=>{
-                this.philosopherELoaded = true;
-                this.drawPhilosophers(philosopherImageT, philosopherImageE, philosopherImageH, philosopherLeftForkImage, philosopherRightForkImage);
-            }
-            philosopherImageH.onload = ()=>{
-                this.philosopherHLoaded = true;
-                this.drawPhilosophers(philosopherImageT, philosopherImageE, philosopherImageH,  philosopherLeftForkImage, philosopherRightForkImage);
-            }
-            philosopherLeftForkImage.onload = ()=>{
-                this.philosopherLeftForkLoaded = true;
-                this.drawPhilosophers(philosopherImageT, philosopherImageE, philosopherImageH,  philosopherLeftForkImage, philosopherRightForkImage);
-            }
-            philosopherRightForkImage.onload = ()=>{
-                this.philosopherRightForkLoaded = true;
-                this.drawPhilosophers(philosopherImageT, philosopherImageE, philosopherImageH, philosopherLeftForkImage, philosopherRightForkImage);
-            }
-            philosopherImageT.src = 'res/philosopherT.png';
-            philosopherImageE.src = 'res/philosopherE.png';
-            philosopherImageH.src = 'res/philosopherH.png';
-            philosopherLeftForkImage.src ="res/philosopherLeftF.png";
-            philosopherRightForkImage.src ="res/philosopherRightF.png";
             // Draw forks
-            let forkImage = new Image();
-            forkImage.onload = ()=>{
+            if (this.forkImage.complete){
                 this.table.forks.forEach((fork)=>{
                     if (fork.getIsFree()) {
                         if (fork.getIsFree()){
-                            this.drawOnForkPosition(fork.getId(), 800, forkImage, 500, 500);
+                            this.drawOnForkPosition(fork.getId(), 800, this.forkImage, 500, 500);
                         }
                     }
                 });
             }
-            forkImage.src = 'res/fork.png';
+            this.drawPhilosophers();
             this.ctx.restore();
         }
         catch (e) {
@@ -291,23 +298,23 @@ class UI{
         this.ctx.rotate(-1*arc);
     }
 
-    private drawPhilosophers(philosopherImageT, philosopherImageE, philosopherImageH, philosopherLeftForkImage, philosopherRightForkImage){
-        if (!this.philosopherELoaded || !this.philosopherTLoaded || !this.philosopherHLoaded|| !this.philosopherLeftForkLoaded|| !this.philosopherRightForkLoaded){
+    private drawPhilosophers(){
+        if (!this.philosopherImageE.complete || !this.philosopherImageH.complete || !this.philosopherImageT.complete || !this.philosopherLeftForkImage.complete || !this.philosopherRightForkImage.complete){
             return;
         }else{
             this.table.philosophers.forEach((philosopher)=>{
-                let pImg = philosopherImageT;
+                let pImg = this.philosopherImageT;
                 if (philosopher.getIsLeftForkTaken()){
-                    pImg = philosopherLeftForkImage;
+                    pImg = this.philosopherLeftForkImage;
                 }else if (philosopher.getIsRightForkTaken()){
-                    pImg = philosopherRightForkImage;
+                    pImg = this.philosopherRightForkImage;
                 }
                 if (philosopher.getState() == Philosopher.EATING){
-                    pImg = philosopherImageE;
+                    pImg = this.philosopherImageE;
                 }else if (philosopher.getState() == Philosopher.HUNGRY){
-                    pImg = philosopherImageH;
+                    pImg = this.philosopherImageH;
                 }
-                this.drawOnTablePosition(philosopher.getId(), 1000, pImg, 500, 500);
+                this.drawOnTablePosition(philosopher.getId(), 1100, pImg, 500, 500);
             });
         }
     }
