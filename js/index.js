@@ -14,6 +14,30 @@ var Fork = /** @class */ (function () {
     };
     return Fork;
 }());
+var SemaphoreHandler = /** @class */ (function () {
+    function SemaphoreHandler(resources, resourceLink) {
+        this.semaphore = resources;
+        this.buffer = [];
+        this.resourceLink = resourceLink;
+    }
+    SemaphoreHandler.prototype.pOperation = function (observer) {
+        if (this.semaphore > 0) {
+            this.semaphore--;
+            observer(this.resourceLink);
+        }
+        else {
+            this.buffer.push(observer);
+        }
+    };
+    SemaphoreHandler.prototype.vOperation = function () {
+        var fun = this.buffer.pop();
+        this.semaphore++;
+        if (fun) {
+            this.pOperation(fun);
+        }
+    };
+    return SemaphoreHandler;
+}());
 var Philosopher = /** @class */ (function () {
     function Philosopher(id) {
         this.id = id;
@@ -42,61 +66,45 @@ var Philosopher = /** @class */ (function () {
     Philosopher.prototype.getId = function () {
         return this.id;
     };
-    Philosopher.prototype.eat = function () {
+    Philosopher.prototype.eatSemaphoreRequest = function () {
         var _this = this;
-        if (this.leftFork.getIsFree() && this.rightFork.getIsFree()) {
-            this.setState(Philosopher.EATING);
-            this.leftFork.setIsFree(false);
-            this.rightFork.setIsFree(false);
-            console.log('Philosopher ' + this.getId() + ' is eating');
-            this.notifyObservers();
-            setTimeout(function () {
-                _this.leftFork.setIsFree(true);
-                _this.rightFork.setIsFree(true);
-                _this.setState(Philosopher.THINKING);
-                console.log('Philosopher ' + _this.getId() + ' is thinking');
+        this.setState(Philosopher.HUNGRY);
+        console.log('Philosopher ' + this.getId() + ' is waiting to eat');
+        this.notifyObservers();
+        this.semaphoreLeftFork.pOperation(function (resourceLink) {
+            _this.holdLeftFork = true;
+            _this.leftFork = resourceLink;
+            _this.leftFork.setIsFree(false);
+            _this.notifyObservers();
+            _this.eatSemaphoreRelease();
+        });
+        setTimeout(function () {
+            _this.semaphoreRightFork.pOperation(function (resourceLink) {
+                _this.holdRightFork = true;
+                _this.rightFork = resourceLink;
+                _this.rightFork.setIsFree(false);
                 _this.notifyObservers();
-            }, 5000);
-        }
-        else {
-            this.setState(Philosopher.HUNGRY);
-            console.log('Philosopher ' + this.getId() + ' is waiting to eat');
-            this.notifyObservers();
-            setTimeout(function () {
-                _this.eat();
-            }, 4000);
-        }
+                _this.eatSemaphoreRelease();
+            });
+        }, 1000);
     };
-    Philosopher.prototype.eatReckless = function () {
+    Philosopher.prototype.eatSemaphoreRelease = function () {
         var _this = this;
-        if (this.leftFork.getIsFree()) {
-            this.leftFork.setIsFree(false);
-            this.holdLeftFork = true;
-            this.notifyObservers();
-        }
-        else if (this.rightFork.getIsFree()) {
-            this.rightFork.setIsFree(false);
-            this.holdRightFork = true;
-            this.notifyObservers();
-        }
         if (this.holdLeftFork && this.holdRightFork) {
             this.setState(Philosopher.EATING);
             console.log('Philosopher ' + this.getId() + ' is eating');
             this.notifyObservers();
             setTimeout(function () {
-                _this.leftFork.setIsFree(true);
-                _this.rightFork.setIsFree(true);
                 _this.holdLeftFork = false;
                 _this.holdRightFork = false;
+                _this.leftFork.setIsFree(true);
+                _this.rightFork.setIsFree(true);
+                _this.semaphoreLeftFork.vOperation();
+                _this.semaphoreRightFork.vOperation();
                 _this.setState(Philosopher.THINKING);
                 console.log('Philosopher ' + _this.getId() + ' is thinking');
                 _this.notifyObservers();
             }, 5000);
-        }
-        else {
-            setTimeout(function () {
-                _this.eatReckless();
-            }, 1000);
         }
     };
     Philosopher.prototype.getIsLeftForkTaken = function () {
@@ -116,8 +124,10 @@ var Table = /** @class */ (function () {
         this.observers = [];
         this.places = places;
         this.forks = [];
+        this.semaphoresForks = [];
         for (var i = 1; i <= places; i++) {
             this.forks.push(new Fork(i));
+            this.semaphoresForks.push(new SemaphoreHandler(1, this.forks[i - 1]));
         }
         this.philosophers = [];
         for (var i = 1; i <= places; i++) {
@@ -126,11 +136,14 @@ var Table = /** @class */ (function () {
                 _this.notifyObservers();
             });
             p.leftFork = this.forks[i - 1];
+            p.semaphoreLeftFork = this.semaphoresForks[i - 1];
             if (i == 1) {
                 p.rightFork = this.forks[places - 1];
+                p.semaphoreRightFork = this.semaphoresForks[places - 1];
             }
             else {
                 p.rightFork = this.forks[i - 2];
+                p.semaphoreRightFork = this.semaphoresForks[i - 2];
             }
             this.philosophers.push(p);
         }
@@ -227,14 +240,13 @@ var UI = /** @class */ (function () {
             if (this.forkImage.complete) {
                 this.table.forks.forEach(function (fork) {
                     if (fork.getIsFree()) {
-                        if (fork.getIsFree()) {
-                            _this.drawOnForkPosition(fork.getId(), 800, _this.forkImage, 500, 500);
-                        }
+                        _this.drawOnForkPosition(fork.getId(), 800, _this.forkImage, 500, 500);
                     }
                 });
             }
             this.drawPhilosophers();
             this.ctx.restore();
+            this.visualiseSemaphores();
         }
         catch (e) {
             console.log(e);
@@ -263,6 +275,9 @@ var UI = /** @class */ (function () {
         else {
             this.table.philosophers.forEach(function (philosopher) {
                 var pImg = _this.philosopherImageT;
+                if (philosopher.getState() == Philosopher.HUNGRY) {
+                    pImg = _this.philosopherImageH;
+                }
                 if (philosopher.getIsLeftForkTaken()) {
                     pImg = _this.philosopherLeftForkImage;
                 }
@@ -272,12 +287,26 @@ var UI = /** @class */ (function () {
                 if (philosopher.getState() == Philosopher.EATING) {
                     pImg = _this.philosopherImageE;
                 }
-                else if (philosopher.getState() == Philosopher.HUNGRY) {
-                    pImg = _this.philosopherImageH;
-                }
                 _this.drawOnTablePosition(philosopher.getId(), 1100, pImg, 500, 500);
             });
         }
+    };
+    UI.prototype.visualiseSemaphores = function () {
+        var div = document.getElementById("semaphorVisualisation");
+        div.innerHTML = "";
+        this.table.philosophers.forEach(function (p) {
+            var semaphorVisualisation = document.createElement("div");
+            var semaphorVisualisationText = document.createElement("p");
+            semaphorVisualisationText.innerText = "Philosopher " + p.getId() + " State: " + p.getState();
+            semaphorVisualisation.appendChild(semaphorVisualisationText);
+            var semaphorVisualisationTextL = document.createElement("p");
+            semaphorVisualisationTextL.innerText = "Semaphore Left Fork Counter: " + p.semaphoreLeftFork.semaphore;
+            semaphorVisualisation.appendChild(semaphorVisualisationTextL);
+            var semaphorVisualisationTextR = document.createElement("p");
+            semaphorVisualisationTextR.innerText = "Semaphore Right Fork Counter: " + p.semaphoreRightFork.semaphore;
+            semaphorVisualisation.appendChild(semaphorVisualisationTextR);
+            div.appendChild(semaphorVisualisation);
+        });
     };
     return UI;
 }());
@@ -295,7 +324,7 @@ startbutton.addEventListener('click', function () {
     var buttonAllEatReckless = document.createElement("button");
     buttonAllEatReckless.addEventListener('click', function () {
         table.philosophers.forEach(function (philosopher) {
-            philosopher.eatReckless();
+            philosopher.eatSemaphoreRequest();
         });
     });
     buttonAllEatReckless.innerText = "All eat Reckless";
@@ -303,19 +332,12 @@ startbutton.addEventListener('click', function () {
     var _loop_1 = function (i) {
         var div = document.createElement("div");
         div.innerText = "Philosopher " + i;
-        var buttonEat = document.createElement("button");
-        var buttonEatR = document.createElement("button");
-        buttonEat.addEventListener('click', function () {
-            console.log(table);
-            table.philosophers[i - 1].eat();
+        var buttonEatSemaphor = document.createElement("button");
+        buttonEatSemaphor.addEventListener('click', function () {
+            table.philosophers[i - 1].eatSemaphoreRequest();
         });
-        buttonEatR.addEventListener('click', function () {
-            table.philosophers[i - 1].eatReckless();
-        });
-        buttonEat.innerText = "Philosopher " + i + " eat";
-        buttonEatR.innerText = "Philosopher " + i + " eat Reckless";
-        div.appendChild(buttonEat);
-        div.appendChild(buttonEatR);
+        buttonEatSemaphor.innerText = "Philosopher " + i + " eat with Semaphore";
+        div.appendChild(buttonEatSemaphor);
         buttonDiv.appendChild(div);
     };
     for (var i = 1; i <= number; i++) {
