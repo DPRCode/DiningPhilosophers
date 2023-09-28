@@ -1,10 +1,25 @@
 class Fork{
+    private observers:Function[];
     private isFree:boolean;
     private id:number;
 
     constructor(id:number) {
         this.id = id;
         this.isFree = true;
+    }
+
+    public addObserver(observer:Function){
+        if (!this.observers){
+            this.observers = [];
+        }
+        this.observers.push(observer);
+    }
+
+    private notifyObservers(){
+        console.log('Fork '+this.getId()+' has changed');
+        this.observers.forEach((observer)=>{
+            observer();
+        });
     }
     public getId():number{
         return this.id;
@@ -16,10 +31,12 @@ class Fork{
 
     public setIsFree(isFree:boolean){
         this.isFree = isFree;
+        this.notifyObservers();
     }
 }
 
 class SemaphoreHandler {
+    private observers:Function[];
     // Usage of a boolean translates this to a mutex
     semaphore:number;
     buffer:Function[];
@@ -29,6 +46,19 @@ class SemaphoreHandler {
         this.buffer = [];
         this.resourceLink = resourceLink;
     }
+    public addObserver(observer:Function){
+        if (!this.observers){
+            this.observers = [];
+        }
+        this.observers.push(observer);
+    }
+
+    private notifyObservers(){
+        console.log('Semaphore has changed');
+        this.observers.forEach((observer)=>{
+            observer();
+        });
+    }
 
     public pOperation(observer:Function){
         if (this.semaphore > 0){
@@ -37,6 +67,7 @@ class SemaphoreHandler {
         }else{
             this.buffer.push(observer);
         }
+        this.notifyObservers();
     }
 
     public vOperation(){
@@ -45,6 +76,7 @@ class SemaphoreHandler {
         if (fun){
             this.pOperation(fun);
         }
+        this.notifyObservers();
     }
 }
 class Philosopher {
@@ -89,6 +121,14 @@ class Philosopher {
 
     public setState(state:number){
         this.state = state;
+        if (this.state == Philosopher.THINKING){
+            console.log('Philosopher '+this.getId()+' is thinking');
+        }else if (this.state == Philosopher.HUNGRY){
+            console.log('Philosopher '+this.getId()+' is hungry');
+        }else if (this.state == Philosopher.EATING){
+            console.log('Philosopher '+this.getId()+' is eating');
+        }
+        this.notifyObservers();
     }
 
     public getId():number{
@@ -96,9 +136,9 @@ class Philosopher {
     }
 
     public eatSemaphoreRequest(){
-        this.setState(Philosopher.HUNGRY);
-        console.log('Philosopher '+this.getId()+' is waiting to eat');
-        this.notifyObservers();
+        if (this.getState()==Philosopher.THINKING){
+            this.setState(Philosopher.HUNGRY);
+        }
         this.semaphoreLeftFork.pOperation((resourceLink:Fork)=>{
             this.holdLeftFork = true;
             this.leftFork = resourceLink;
@@ -111,7 +151,6 @@ class Philosopher {
                 this.holdRightFork = true;
                 this.rightFork = resourceLink;
                 this.rightFork.setIsFree(false);
-                this.notifyObservers();
                 this.eatSemaphoreRelease();
             });
         }, 1000);
@@ -120,18 +159,14 @@ class Philosopher {
     public eatSemaphoreRelease(){
         if (this.holdLeftFork&&this.holdRightFork){
             this.setState(Philosopher.EATING);
-            console.log('Philosopher '+this.getId()+' is eating');
-            this.notifyObservers();
             setTimeout(()=>{
+                this.setState(Philosopher.THINKING);
                 this.holdLeftFork = false;
                 this.holdRightFork = false;
                 this.leftFork.setIsFree(true);
                 this.rightFork.setIsFree(true);
                 this.semaphoreLeftFork.vOperation();
                 this.semaphoreRightFork.vOperation();
-                this.setState(Philosopher.THINKING);
-                console.log('Philosopher '+this.getId()+' is thinking');
-                this.notifyObservers();
             }, 5000);
         }
     }
@@ -156,8 +191,16 @@ class Table{
         this.forks = [];
         this.semaphoresForks = [];
         for (let i = 1; i <= places; i++) {
-            this.forks.push(new Fork(i));
-            this.semaphoresForks.push(new SemaphoreHandler(1, this.forks[i-1]));
+            let f = new Fork(i);
+            f.addObserver(()=>{
+                this.notifyObservers();
+            });
+            this.forks.push(f);
+            let s = new SemaphoreHandler(1, this.forks[i-1]);
+            s.addObserver(()=>{
+                this.notifyObservers();
+            });
+            this.semaphoresForks.push(s);
         }
 
         this.philosophers = [];
@@ -295,7 +338,7 @@ class UI{
             }
             this.drawPhilosophers();
             this.ctx.restore();
-            this.visualiseSemaphores();
+            this.visualiseSemaphore();
         }
         catch (e) {
             console.log(e);
@@ -329,13 +372,12 @@ class UI{
                 let pImg = this.philosopherImageT;
                 if (philosopher.getState() == Philosopher.HUNGRY){
                     pImg = this.philosopherImageH;
-                }
-                if (philosopher.getIsLeftForkTaken()){
-                    pImg = this.philosopherLeftForkImage;
-                }else if (philosopher.getIsRightForkTaken()){
-                    pImg = this.philosopherRightForkImage;
-                }
-                if (philosopher.getState() == Philosopher.EATING){
+                    if (philosopher.getIsLeftForkTaken()){
+                        pImg = this.philosopherLeftForkImage;
+                    }else if (philosopher.getIsRightForkTaken()){
+                        pImg = this.philosopherRightForkImage;
+                    }
+                }else if (philosopher.getState() == Philosopher.EATING){
                     pImg = this.philosopherImageE;
                 }
                 this.drawOnTablePosition(philosopher.getId(), 1100, pImg, 500, 500);
@@ -343,21 +385,64 @@ class UI{
         }
     }
 
-    visualiseSemaphores(){
-        let div = document.getElementById("semaphorVisualisation") as HTMLDivElement;
+    visualisePhilosopher(){
+        let div = document.getElementById("PhilosopherVisualisation") as HTMLDivElement;
         div.innerHTML = "";
         this.table.philosophers.forEach((p)=>{
-            let semaphorVisualisation = document.createElement("div");
-            let semaphorVisualisationText = document.createElement("p");
-            semaphorVisualisationText.innerText = "Philosopher "+p.getId()+" State: "+p.getState();
-            semaphorVisualisation.appendChild(semaphorVisualisationText);
-            let semaphorVisualisationTextL = document.createElement("p");
-            semaphorVisualisationTextL.innerText = "Semaphore Left Fork Counter: "+p.semaphoreLeftFork.semaphore;
-            semaphorVisualisation.appendChild(semaphorVisualisationTextL);
-            let semaphorVisualisationTextR = document.createElement("p");
-            semaphorVisualisationTextR.innerText = "Semaphore Right Fork Counter: "+p.semaphoreRightFork.semaphore;
-            semaphorVisualisation.appendChild(semaphorVisualisationTextR);
-            div.appendChild(semaphorVisualisation);
+            let philosopherVisualisation = document.createElement("div");
+            philosopherVisualisation.classList.add("philosopherVisualisationDivs");
+            let philosopherVisualisationText = document.createElement("p");
+            switch (p.getState()){
+                case Philosopher.THINKING:
+                    philosopherVisualisationText.innerText = "Philosopher "+p.getId()+" is thinking";
+                    break;
+                case Philosopher.HUNGRY:
+                    philosopherVisualisationText.innerText = "Philosopher "+p.getId()+" is hungry";
+                    break;
+                case Philosopher.EATING:
+                    philosopherVisualisationText.innerText = "Philosopher "+p.getId()+" is eating";
+                    break;
+            }
+            philosopherVisualisation.appendChild(philosopherVisualisationText);
+            let philosopherVisualisationTextL = document.createElement("p");
+            if (p.semaphoreLeftFork.semaphore == 0){
+                philosopherVisualisationTextL.classList.add("semaphoreRed");
+                philosopherVisualisationTextL.innerText = "Left Fork used. Counter: ";
+            }else{
+                philosopherVisualisationTextL.classList.add("semaphoreGreen");
+                philosopherVisualisationTextL.innerText = "Left Fork free. Counter: ";
+            }
+            philosopherVisualisation.appendChild(philosopherVisualisationTextL);
+            let philosopherVisualisationTextR = document.createElement("p");
+            if (p.semaphoreRightFork.semaphore == 0){
+                philosopherVisualisationTextR.classList.add("semaphoreRed");
+                philosopherVisualisationTextR.innerText = "Right Fork used. Counter: ";
+            }else {
+                philosopherVisualisationTextR.classList.add("semaphoreGreen");
+                philosopherVisualisationTextR.innerText = "Right Fork free. Counter: ";
+            }
+            philosopherVisualisation.appendChild(philosopherVisualisationTextR);
+            div.appendChild(philosopherVisualisation);
+        });
+    }
+
+    public visualiseSemaphore(){
+        let div = document.getElementById("SemaphoreVisualisation") as HTMLDivElement;
+        div.innerHTML = "";
+        this.table.semaphoresForks.forEach((s)=>{
+            let fork:Fork = s.resourceLink as Fork;
+            let semaphoreVisualisation = document.createElement("div");
+            semaphoreVisualisation.classList.add("semaphoreVisualisationDivs");
+            let semaphoreVisualisationText = document.createElement("p");
+            semaphoreVisualisationText.innerText = "Semaphore of fork "+fork.getId();
+            semaphoreVisualisation.appendChild(semaphoreVisualisationText);
+            let availableText = document.createElement("p");
+            availableText.innerText = "Available resources: "+s.semaphore;
+            semaphoreVisualisation.appendChild(availableText);
+            let bufferText = document.createElement("p");
+            bufferText.innerText = "In Buffer waiting: "+s.buffer.length;
+            semaphoreVisualisation.appendChild(bufferText);
+            div.appendChild(semaphoreVisualisation);
         });
     }
 }
