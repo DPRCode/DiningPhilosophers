@@ -171,12 +171,60 @@ class Philosopher {
         }
     }
 
+    public eatMonitor(){
+        if (this.getState()==Philosopher.THINKING){
+            this.setState(Philosopher.HUNGRY);
+        }
+        this.notifyObservers();
+        let monitor = new PhilosopherMonitor(this);
+        let forksAquired = false;
+        forksAquired = monitor.aquireForks();
+        if (!forksAquired){
+            setTimeout(()=>{
+                this.eatMonitor();
+            } , 1000);
+        }else{
+            this.setState(Philosopher.EATING);
+            setTimeout(()=>{
+                this.setState(Philosopher.THINKING);
+                monitor.releaseForks();
+                this.notifyObservers();
+            }, 5000);
+        }
+    }
+
     getIsLeftForkTaken() {
         return this.holdLeftFork;
     }
 
     getIsRightForkTaken() {
        return this.holdRightFork;
+    }
+}
+
+class PhilosopherMonitor {
+    public philosopher:Philosopher;
+
+    constructor(philosopher:Philosopher){
+        this.philosopher = philosopher;
+    }
+    public aquireForks(){
+        if (this.philosopher.rightFork.getIsFree() && this.philosopher.leftFork.getIsFree()){
+            this.philosopher.rightFork.setIsFree(false);
+            this.philosopher.leftFork.setIsFree(false);
+            this.philosopher.holdLeftFork = true;
+            this.philosopher.holdRightFork = true;
+            return true;
+        }else {
+            return false;
+        }
+    }
+
+    public releaseForks(){
+        this.philosopher.rightFork.setIsFree(true);
+        this.philosopher.leftFork.setIsFree(true);
+        this.philosopher.holdLeftFork = false;
+        this.philosopher.holdRightFork = false;
     }
 }
 class Table{
@@ -465,8 +513,16 @@ startbutton.addEventListener('click', ()=>{
             philosopher.eatSemaphoreRequest();
         });
     });
-    buttonAllEatReckless.innerText = "All eat Reckless";
+    buttonAllEatReckless.innerText = "All eat Reckless (Semaphore)";
     buttonDiv.appendChild(buttonAllEatReckless);
+    let buttonAllEatMonitor = document.createElement("button");
+    buttonAllEatMonitor.addEventListener('click', ()=>{
+        table.philosophers.forEach((philosopher)=>{
+            philosopher.eatMonitor();
+        });
+    });
+    buttonAllEatMonitor.innerText = "All eat Civilized (Monitor)";
+    buttonDiv.appendChild(buttonAllEatMonitor);
     for (let i = 1; i <=number; i++) {
         let div = document.createElement("div");
         div.innerText = "Philosopher "+i;
@@ -476,6 +532,12 @@ startbutton.addEventListener('click', ()=>{
         });
         buttonEatSemaphor.innerText = "Philosopher "+i+" eat with Semaphore";
         div.appendChild(buttonEatSemaphor);
+        let buttonEatMonitor = document.createElement("button");
+        buttonEatMonitor.addEventListener('click', ()=>{
+            table.philosophers[i-1].eatMonitor();
+        });
+        buttonEatMonitor.innerText = "Philosopher "+i+" eat with Monitor";
+        //div.appendChild(buttonEatMonitor);
         buttonDiv.appendChild(div);
     }
 });
